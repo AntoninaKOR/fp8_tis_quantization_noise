@@ -4,7 +4,8 @@ experiment:
   tags: [fp8, flashrl, tis, quant_noise, grpo, gsm8k]
 
 model:
-  name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+  # Smaller default for iteration; use Qwen/Qwen2.5-1.5B-Instruct for stronger runs.
+  name_or_path: Qwen/Qwen2.5-0.5B-Instruct
   dtype: bf16
 
 benchmark:
@@ -43,7 +44,7 @@ training:
   grad_clip: 0.2
   lr_scheduler: cosine
   warmup_steps: 200
-  gradient_checkpointing: false  # set true to save ~30% GPU memory at cost of +20% time
+  gradient_checkpointing: true   # saves ~3 GB; fits 1.5B full FT on 24 GB GPU
   seed: 42
 
 rollout_correction:

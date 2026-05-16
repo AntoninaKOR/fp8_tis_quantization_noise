@@ -4,7 +4,8 @@ experiment:
   tags: [bf16, grpo, gsm8k, baseline]
 
 model:
-  name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+  # Smaller default for iteration; use Qwen/Qwen2.5-1.5B-Instruct for stronger runs.
+  name_or_path: Qwen/Qwen2.5-0.5B-Instruct
   dtype: bf16
 
 benchmark:
@@ -46,7 +47,7 @@ training:
   grad_clip: 0.2             # QeRL: 0.2 (conservative; LoRA tolerates larger grads)
   lr_scheduler: cosine
   warmup_steps: 200          # ~10% of 2000 steps, matching QeRL warmup_ratio=0.1
-  gradient_checkpointing: false  # set true to save ~30% GPU memory at cost of +20% time
+  gradient_checkpointing: true   # saves ~3 GB; fits 1.5B full FT on 24 GB GPU
   seed: 42
 
 rollout_correction:
