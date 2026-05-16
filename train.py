@@ -157,38 +157,50 @@ def bf16_rollout(
     """
     model_device = next(model.parameters()).device
 
-    _prev_pad = tokenizer.padding_side
+    prev_side = tokenizer.padding_side
     tokenizer.padding_side = "left"
     try:
-        prompt_ids = tokenizer(
+        enc = tokenizer(
             prompts * group_size,
             return_tensors="pt",
             padding=True,
             truncation=True,
             max_length=max_prompt_length,
-        ).to(model_device)
-    finally:
-        tokenizer.padding_side = _prev_pad
+        )
+        enc = {k: v.to(model_device) for k, v in enc.items()}
+        prompt_len = enc["input_ids"].shape[1]
 
-    autocast_ctx = (
-        torch.autocast(device_type=model_device.type, dtype=autocast_dtype)
-        if autocast_dtype is not None
-        else torch.autocast(device_type=model_device.type, enabled=False)
-    )
-
-    with autocast_ctx:
-        out = model.generate(
-            **prompt_ids,
-            max_new_tokens=max_response_length,
-            do_sample=True,
-            temperature=temperature,
-            top_p=top_p,
-            pad_token_id=tokenizer.eos_token_id,
+        autocast_ctx = (
+            torch.autocast(device_type=model_device.type, dtype=autocast_dtype)
+            if autocast_dtype is not None
+            else torch.autocast(device_type=model_device.type, enabled=False)
         )
 
-    response_ids = out[:, prompt_ids.input_ids.shape[1]:]
-    decoded = tokenizer.batch_decode(response_ids, skip_special_tokens=True)
-    return decoded, response_ids.to(device), prompt_ids.input_ids.to(device)
+        with autocast_ctx:
+            # HF warns when input_ids[:, -1] == pad_token_id; if pad_token_id == eos_token_id
+            # (common for decoder-only models) the last real prompt token can match spuriously.
+            # github.com/huggingface/transformers/issues/34658
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message=r".*right-padding was detected.*",
+                )
+                out = model.generate(
+                    input_ids=enc["input_ids"],
+                    attention_mask=enc["attention_mask"],
+                    max_new_tokens=max_response_length,
+                    do_sample=True,
+                    temperature=temperature,
+                    top_p=top_p,
+                    pad_token_id=tokenizer.pad_token_id,
+                    eos_token_id=tokenizer.eos_token_id,
+                )
+
+        response_ids = out[:, prompt_len:]
+        decoded = tokenizer.batch_decode(response_ids, skip_special_tokens=True)
+        return decoded, response_ids.to(device), enc["input_ids"].to(device)
+    finally:
+        tokenizer.padding_side = prev_side
 
 
 # ---------------------------------------------------------------------------
