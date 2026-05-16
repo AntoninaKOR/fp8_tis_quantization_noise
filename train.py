@@ -334,13 +334,16 @@ def train(config: dict, smoke: bool = False):
         # ---- rollout ----
         with Timer() as rollout_timer:
             if rollout_worker is not None:
-                rb = rollout_worker.generate({"prompts": prompts})
+                # Same layout as bf16_rollout: one rollout per (prompt × group_size).
+                rollout_prompts = prompts * group_size
+                rb = rollout_worker.generate({"prompts": rollout_prompts})
                 responses        = rb["decoded_text"]
-                rollout_logprobs = rb["rollout_logprobs"]    # [B, R]
-                response_ids     = rb["input_ids"]
-                prompt_ids_tensor = rb["prompts"]
+                rollout_logprobs = rb["rollout_logprobs"].to(device)    # [B, R]
+                response_ids     = rb["input_ids"].to(device)
+                prompts = rollout_prompts
+                golds   = golds * group_size
             else:
-                responses, response_ids, prompt_ids_tensor = bf16_rollout(
+                responses, response_ids, _ = bf16_rollout(
                     model, tokenizer, prompts,
                     max_prompt_length=max_plen,
                     max_response_length=max_rlen,
