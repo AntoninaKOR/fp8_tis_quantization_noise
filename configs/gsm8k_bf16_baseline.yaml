@@ -46,6 +46,7 @@ training:
   grad_clip: 0.2             # QeRL: 0.2 (conservative; LoRA tolerates larger grads)
   lr_scheduler: cosine
   warmup_steps: 200          # ~10% of 2000 steps, matching QeRL warmup_ratio=0.1
+  gradient_checkpointing: false  # set true to save ~30% GPU memory at cost of +20% time
   seed: 42
 
 rollout_correction:

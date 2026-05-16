@@ -250,6 +250,9 @@ def train(config: dict, smoke: bool = False):
         torch_dtype=train_dtype,
         device_map={"": device},
     )
+    if config.get("training", {}).get("gradient_checkpointing", False):
+        model.gradient_checkpointing_enable()
+        print("Gradient checkpointing enabled (-30% memory, +20% time)", flush=True)
     model.train()
 
     # ---- optimizer ----
