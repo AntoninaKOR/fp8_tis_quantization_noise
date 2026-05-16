@@ -196,11 +196,12 @@ def get_rollout_worker(config: dict, model_path: str, tokenizer_path: str):
             return FlashRLRolloutWorker(
                 model_path=model_path,
                 tokenizer_path=tokenizer_path,
-                fp8=True,
-                max_prompt_length=config["inference"].get("max_prompt_length", 512),
-                max_response_length=config["inference"].get("max_response_length", 1024),
+                fp8=config["inference"].get("quantization", "fp8") == "fp8",
+                max_prompt_length=config["inference"].get("max_prompt_length", 256),
+                max_response_length=config["inference"].get("max_response_length", 2048),
                 temperature=config["inference"].get("temperature", 1.0),
                 top_p=config["inference"].get("top_p", 1.0),
+                seed=config.get("training", {}).get("seed", 42),
             )
         except ImportError:
             warnings.warn(

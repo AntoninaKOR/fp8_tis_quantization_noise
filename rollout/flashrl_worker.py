@@ -41,6 +41,7 @@ class FlashRLRolloutWorker:
         max_response_length: int = 1024,
         temperature: float = 1.0,
         top_p: float = 0.95,
+        seed: int = 42,
     ):
         # FlashRL requires vLLM v1 engine
         os.environ["VLLM_USE_V1"] = "1"
@@ -83,6 +84,7 @@ class FlashRLRolloutWorker:
             model=model_path,
             tensor_parallel_size=1,
             gpu_memory_utilization=0.7,
+            seed=seed,  # required by FlashRL external_launcher backend
         )
         self.sampling_params = SamplingParams(
             temperature=temperature,
