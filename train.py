@@ -334,7 +334,7 @@ def train(config: dict, smoke: bool = False):
         # ---- rollout ----
         with Timer() as rollout_timer:
             if rollout_worker is not None:
-                rb = rollout_worker.generate(raw_batch)
+                rb = rollout_worker.generate({"prompts": prompts})
                 responses        = rb["decoded_text"]
                 rollout_logprobs = rb["rollout_logprobs"]    # [B, R]
                 response_ids     = rb["input_ids"]
