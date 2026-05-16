@@ -1,6 +1,6 @@
 experiment:
   name: gsm8k_flashrl_fp8_tis_quant_noise
-  description: "FlashRL FP8 rollout + BF16 training + TIS + adaptive quant noise"
+  description: "FlashRL FP8 rollout + BF16 training + TIS + adaptive quant noise. Full fine-tune."
   tags: [fp8, flashrl, tis, quant_noise, grpo, gsm8k]
 
 model:
@@ -23,8 +23,8 @@ inference:
   backend: flashrl
   quantization: fp8
   return_logprobs: true
-  max_prompt_length: 512
-  max_response_length: 1024
+  max_prompt_length: 256
+  max_response_length: 2048
   temperature: 1.0
   top_p: 1.0
   top_k: -1
@@ -33,15 +33,16 @@ training:
   algorithm: grpo
   group_size: 8
   batch_size: 32
-  mini_batch_size: 8
   max_steps: 2000
   eval_interval: 100
   save_interval: 500
-  learning_rate: 1.0e-5
+  learning_rate: 1.0e-6
+  adam_beta1: 0.9
+  adam_beta2: 0.99
+  weight_decay: 0.1
+  grad_clip: 0.2
   lr_scheduler: cosine
-  warmup_steps: 50
-  grad_clip: 1.0
-  weight_decay: 0.01
+  warmup_steps: 200
   seed: 42
 
 rollout_correction:
@@ -76,7 +77,6 @@ logging:
   stdout: true
   comet: false
   json: true
-  # json_path: null
 
 comet:
   project_name: fp8_tis_gsm8k

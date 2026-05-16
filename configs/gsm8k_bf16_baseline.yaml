@@ -1,6 +1,6 @@
 experiment:
   name: gsm8k_bf16_baseline
-  description: "BF16 rollout + BF16 training, GRPO, no TIS, no quant noise"
+  description: "BF16 rollout + BF16 training, GRPO, no TIS, no quant noise. Full fine-tune (no LoRA)."
   tags: [bf16, grpo, gsm8k, baseline]
 
 model:
@@ -23,8 +23,8 @@ inference:
   backend: hf          # plain HuggingFace generate (no FlashRL)
   quantization: none
   return_logprobs: false
-  max_prompt_length: 512
-  max_response_length: 1024
+  max_prompt_length: 256       # QeRL: 256 for GSM8K (prompts are short)
+  max_response_length: 2048    # QeRL: 2048 for GSM8K (needs long chain-of-thought)
   temperature: 1.0
   top_p: 1.0
   top_k: -1
@@ -32,16 +32,20 @@ inference:
 training:
   algorithm: grpo
   group_size: 8              # responses per prompt for advantage normalisation
-  batch_size: 32
-  mini_batch_size: 8
+  batch_size: 32             # = n_prompts × group_size responses total
   max_steps: 2000
   eval_interval: 100
   save_interval: 500
-  learning_rate: 1.0e-5
+
+  # Optimizer — tuned for full fine-tune (not LoRA):
+  # QeRL LoRA uses lr=5e-6; full FT needs lower to avoid catastrophic forgetting
+  learning_rate: 1.0e-6
+  adam_beta1: 0.9
+  adam_beta2: 0.99           # QeRL default (tighter than PyTorch's 0.999)
+  weight_decay: 0.1          # QeRL: 0.1 (stronger regularisation vs our old 0.01)
+  grad_clip: 0.2             # QeRL: 0.2 (conservative; LoRA tolerates larger grads)
   lr_scheduler: cosine
-  warmup_steps: 50
-  grad_clip: 1.0
-  weight_decay: 0.01
+  warmup_steps: 200          # ~10% of 2000 steps, matching QeRL warmup_ratio=0.1
   seed: 42
 
 rollout_correction:
@@ -63,10 +67,9 @@ diagnostics:
   abort_on_nan: true
 
 logging:
-  stdout: true    # always print a summary line per step
-  comet: false    # set to true + fill in comet: block to enable Comet-ML
-  json: true      # write metrics.jsonl to outputs/gsm8k_bf16_baseline/
-  # json_path: /custom/path/metrics.jsonl   # optional override
+  stdout: true
+  comet: false
+  json: true
 
 comet:
   project_name: fp8_tis_gsm8k

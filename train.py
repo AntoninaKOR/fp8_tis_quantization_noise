@@ -256,8 +256,12 @@ def train(config: dict, smoke: bool = False):
     t_cfg = config["training"]
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=float(t_cfg.get("learning_rate", 1e-5)),
-        weight_decay=float(t_cfg.get("weight_decay", 0.01)),
+        lr=float(t_cfg.get("learning_rate", 1e-6)),
+        betas=(
+            float(t_cfg.get("adam_beta1", 0.9)),
+            float(t_cfg.get("adam_beta2", 0.99)),
+        ),
+        weight_decay=float(t_cfg.get("weight_decay", 0.1)),
     )
 
     # ---- rollout worker ----
