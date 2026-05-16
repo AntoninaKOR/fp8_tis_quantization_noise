@@ -216,15 +216,19 @@ def get_rollout_worker(config: dict, model_path: str, tokenizer_path: str):
     if backend == "flashrl":
         try:
             from rollout.flashrl_worker import FlashRLRolloutWorker
+            inf = config["inference"]
+            max_mlen = inf.get("vllm_max_model_len")
             return FlashRLRolloutWorker(
                 model_path=model_path,
                 tokenizer_path=tokenizer_path,
-                fp8=config["inference"].get("quantization", "fp8") == "fp8",
-                max_prompt_length=config["inference"].get("max_prompt_length", 256),
-                max_response_length=config["inference"].get("max_response_length", 2048),
-                temperature=config["inference"].get("temperature", 1.0),
-                top_p=config["inference"].get("top_p", 1.0),
+                fp8=inf.get("quantization", "fp8") == "fp8",
+                max_prompt_length=inf.get("max_prompt_length", 256),
+                max_response_length=inf.get("max_response_length", 2048),
+                temperature=inf.get("temperature", 1.0),
+                top_p=inf.get("top_p", 1.0),
                 seed=config.get("training", {}).get("seed", 42),
+                gpu_memory_utilization=float(inf.get("vllm_gpu_memory_utilization", 0.30)),
+                max_model_len=int(max_mlen) if max_mlen is not None else None,
             )
         except ImportError:
             warnings.warn(

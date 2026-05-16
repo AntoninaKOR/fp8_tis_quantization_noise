@@ -30,7 +30,9 @@ class FlashRLRolloutWorker:
     Usage in train.py (set in YAML):
         inference:
           backend: flashrl
-          fp8: true          # or int8 / bf16
+          quantization: fp8          # or int8 / bf16
+          vllm_gpu_memory_utilization: 0.28   # optional; leave VRAM for HF training model
+          vllm_max_model_len: 2432           # optional; caps KV (~prompt+response slack)
     """
 
     def __init__(
@@ -43,6 +45,9 @@ class FlashRLRolloutWorker:
         temperature: float = 1.0,
         top_p: float = 0.95,
         seed: int = 42,
+        *,
+        gpu_memory_utilization: float = 0.30,
+        max_model_len: int | None = None,
     ):
         # FlashRL requires vLLM v1 engine
         os.environ["VLLM_USE_V1"] = "1"
@@ -82,10 +87,17 @@ class FlashRLRolloutWorker:
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
+        # Defaults assume HF training weights already occupy most VRAM — leave headroom.
+        _max_model_len = (
+            max_model_len
+            if max_model_len is not None
+            else max_prompt_length + max_response_length + 128
+        )
         self.llm = LLM(
             model=model_path,
             tensor_parallel_size=1,
-            gpu_memory_utilization=0.7,
+            gpu_memory_utilization=gpu_memory_utilization,
+            max_model_len=_max_model_len,
             seed=seed,  # required by FlashRL external_launcher backend
         )
         self.sampling_params = SamplingParams(

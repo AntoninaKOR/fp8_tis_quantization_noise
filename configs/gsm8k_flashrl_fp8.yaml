@@ -29,11 +29,15 @@ inference:
   temperature: 1.0
   top_p: 1.0
   top_k: -1
+  # Single-GPU: HF trainer + vLLM share VRAM. Defaults below are conservative vs standalone vLLM.
+  vllm_gpu_memory_utilization: 0.28
+  # Cap KV reservation (~max_prompt_length + max_response_length + small slack).
+  vllm_max_model_len: 2432
 
 training:
   algorithm: grpo
   group_size: 8
-  batch_size: 32
+  batch_size: 16             # lower than bf16-only runs; train forward is parallel to vLLM footprint
   max_steps: 2000
   eval_interval: 100
   save_interval: 500
