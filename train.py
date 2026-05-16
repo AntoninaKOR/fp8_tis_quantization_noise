@@ -95,22 +95,28 @@ def tokenize_batch(
     Tokenize prompt+response pairs and build input_ids, attention_mask,
     response_mask tensors.
     """
-    prompt_ids = tokenizer(
-        prompts,
-        return_tensors="pt",
-        padding="max_length",
-        truncation=True,
-        max_length=max_prompt_length,
-    ).to(device)
+    _prev_pad = tokenizer.padding_side
+    try:
+        tokenizer.padding_side = "left"
+        prompt_ids = tokenizer(
+            prompts,
+            return_tensors="pt",
+            padding="max_length",
+            truncation=True,
+            max_length=max_prompt_length,
+        ).to(device)
 
-    response_ids = tokenizer(
-        responses,
-        return_tensors="pt",
-        padding="max_length",
-        truncation=True,
-        max_length=max_response_length,
-        add_special_tokens=False,
-    ).to(device)
+        tokenizer.padding_side = "right"
+        response_ids = tokenizer(
+            responses,
+            return_tensors="pt",
+            padding="max_length",
+            truncation=True,
+            max_length=max_response_length,
+            add_special_tokens=False,
+        ).to(device)
+    finally:
+        tokenizer.padding_side = _prev_pad
 
     input_ids = torch.cat([prompt_ids.input_ids, response_ids.input_ids], dim=1)
     attention_mask = torch.cat(
@@ -151,13 +157,18 @@ def bf16_rollout(
     """
     model_device = next(model.parameters()).device
 
-    prompt_ids = tokenizer(
-        prompts * group_size,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=max_prompt_length,
-    ).to(model_device)
+    _prev_pad = tokenizer.padding_side
+    tokenizer.padding_side = "left"
+    try:
+        prompt_ids = tokenizer(
+            prompts * group_size,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=max_prompt_length,
+        ).to(model_device)
+    finally:
+        tokenizer.padding_side = _prev_pad
 
     autocast_ctx = (
         torch.autocast(device_type=model_device.type, dtype=autocast_dtype)
@@ -230,6 +241,7 @@ def train(config: dict, smoke: bool = False):
     model_path = config["model"]["name_or_path"]
     print(f"Loading model: {model_path}")
     tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side="left")
+    tokenizer.padding_side = "left"
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 

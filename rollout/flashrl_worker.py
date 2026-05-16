@@ -78,6 +78,7 @@ class FlashRLRolloutWorker:
         from transformers import AutoTokenizer
 
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+        self.tokenizer.padding_side = "left"
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
