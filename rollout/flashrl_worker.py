@@ -45,6 +45,14 @@ class FlashRLRolloutWorker:
         # FlashRL requires vLLM v1 engine
         os.environ["VLLM_USE_V1"] = "1"
 
+        # FlashRL requires distributed env vars (RANK/WORLD_SIZE).
+        # Set defaults for single-GPU non-distributed launch.
+        os.environ.setdefault("RANK", "0")
+        os.environ.setdefault("WORLD_SIZE", "1")
+        os.environ.setdefault("LOCAL_RANK", "0")
+        os.environ.setdefault("MASTER_ADDR", "localhost")
+        os.environ.setdefault("MASTER_PORT", "29500")
+
         # Apply FlashRL patch before importing vLLM
         try:
             precision = "fp8" if fp8 else "bf16"
