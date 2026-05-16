@@ -33,7 +33,7 @@ import torch
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from data.gsm8k import get_gsm8k_dataloader, gsm8k_reward_batch, extract_gsm8k_gold, apply_chat_template
+from data.gsm8k import get_gsm8k_dataloader, gsm8k_reward_batch, apply_chat_template
 from trainer.grpo_loss import compute_grpo_advantages, grpo_loss_with_tis
 from trainer.logprob_recompute import recompute_train_logprobs_with_grad
 from trainer.metrics import (
