@@ -42,6 +42,9 @@ class FlashRLRolloutWorker:
         temperature: float = 1.0,
         top_p: float = 0.95,
     ):
+        # FlashRL requires vLLM v1 engine
+        os.environ["VLLM_USE_V1"] = "1"
+
         # Apply FlashRL patch before importing vLLM
         try:
             precision = "fp8" if fp8 else "bf16"
