@@ -1,0 +1,75 @@
+experiment:
+  name: gsm8k_bf16_baseline
+  description: "BF16 rollout + BF16 training, GRPO, no TIS, no quant noise"
+  tags: [bf16, grpo, gsm8k, baseline]
+
+model:
+  name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+  dtype: bf16
+
+benchmark:
+  name: gsm8k
+  train_split: train
+  eval_split: test
+  prompt_template: step_by_step_final_numeric
+  reward: exact_match_numeric
+
+precision:
+  train_dtype: bf16
+  rollout_dtype: bf16
+  kv_cache_dtype: bf16
+
+inference:
+  backend: hf          # plain HuggingFace generate (no FlashRL)
+  quantization: none
+  return_logprobs: false
+  max_prompt_length: 512
+  max_response_length: 1024
+  temperature: 1.0
+  top_p: 1.0
+  top_k: -1
+
+training:
+  algorithm: grpo
+  group_size: 8              # responses per prompt for advantage normalisation
+  batch_size: 32
+  mini_batch_size: 8
+  max_steps: 2000
+  eval_interval: 100
+  save_interval: 500
+  learning_rate: 1.0e-5
+  lr_scheduler: cosine
+  warmup_steps: 50
+  grad_clip: 1.0
+  weight_decay: 0.01
+  seed: 42
+
+rollout_correction:
+  enabled: false
+  method: none
+
+quant_noise:
+  enabled: false
+  mode: none
+  target: rollout_only
+  initial_scale: 0.0
+  min_scale: 0.0
+  max_scale: 0.0
+
+diagnostics:
+  log_mismatch: false
+  log_effective_sample_size: false
+  log_clipped_fraction: false
+  abort_on_nan: true
+
+logging:
+  stdout: true    # always print a summary line per step
+  comet: false    # set to true + fill in comet: block to enable Comet-ML
+  json: true      # write metrics.jsonl to outputs/gsm8k_bf16_baseline/
+  # json_path: /custom/path/metrics.jsonl   # optional override
+
+comet:
+  project_name: fp8_tis_gsm8k
+  experiment_name: gsm8k_bf16_baseline
+  tags: [bf16, baseline, grpo, gsm8k]
+  # api_key: YOUR_KEY_HERE   # or set COMET_API_KEY env var
