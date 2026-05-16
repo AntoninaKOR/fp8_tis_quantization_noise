@@ -20,6 +20,7 @@ import os
 from typing import Any
 
 import torch
+import torch.distributed as dist
 
 
 class FlashRLRolloutWorker:
@@ -95,6 +96,32 @@ class FlashRLRolloutWorker:
         )
         self.max_prompt_length = max_prompt_length
         self.max_response_length = max_response_length
+        self._shutdown_done = False
+
+    def shutdown(self) -> None:
+        """Release vLLM workers and tear down torch.distributed (avoids NCCL leak warnings)."""
+        if self._shutdown_done:
+            return
+        self._shutdown_done = True
+
+        llm = getattr(self, "llm", None)
+        self.llm = None
+        if llm is not None:
+            shutdown = getattr(llm, "shutdown", None)
+            if callable(shutdown):
+                shutdown()
+            else:
+                engine = getattr(llm, "llm_engine", None)
+                if engine is not None:
+                    eng_shutdown = getattr(engine, "shutdown", None)
+                    if callable(eng_shutdown):
+                        eng_shutdown()
+
+        if dist.is_available() and dist.is_initialized():
+            try:
+                dist.destroy_process_group()
+            except Exception:
+                pass
 
     def generate(self, batch: dict) -> dict:
         """

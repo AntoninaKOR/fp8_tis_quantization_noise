@@ -319,6 +319,65 @@ def train(config: dict, smoke: bool = False):
     dataloader   = get_gsm8k_dataloader("train",  batch_size=batch_size // group_size)
     eval_batches = list(get_gsm8k_dataloader("test", batch_size=16, shuffle=False))
 
+    try:
+        _training_loop_body(
+            rollout_worker=rollout_worker,
+            dataloader=dataloader,
+            eval_batches=eval_batches,
+            tokenizer=tokenizer,
+            model=model,
+            optimizer=optimizer,
+            device=device,
+            logger=logger,
+            noise_ctrl=noise_ctrl,
+            group_size=group_size,
+            max_steps=max_steps,
+            eval_every=eval_every,
+            save_every=save_every,
+            max_plen=max_plen,
+            max_rlen=max_rlen,
+            temp=temp,
+            top_p=top_p,
+            t_cfg=t_cfg,
+            tis_enabled=tis_enabled,
+            tis_clip=tis_clip,
+            tis_maxlr=tis_maxlr,
+            out_dir=out_dir,
+            smoke=smoke,
+            rollout_autocast_dtype=rollout_autocast_dtype,
+        )
+    finally:
+        if rollout_worker is not None:
+            rollout_worker.shutdown()
+
+
+def _training_loop_body(
+    *,
+    rollout_worker,
+    dataloader,
+    eval_batches,
+    tokenizer,
+    model,
+    optimizer,
+    device,
+    logger,
+    noise_ctrl,
+    group_size,
+    max_steps,
+    eval_every,
+    save_every,
+    max_plen,
+    max_rlen,
+    temp,
+    top_p,
+    t_cfg,
+    tis_enabled,
+    tis_clip,
+    tis_maxlr,
+    out_dir,
+    smoke,
+    rollout_autocast_dtype,
+):
     step = 0
     for raw_batch in dataloader:
         if step >= max_steps:
